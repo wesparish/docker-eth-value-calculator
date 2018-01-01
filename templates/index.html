@@ -8,17 +8,16 @@
         crossorigin="anonymous">
 
   <!-- Custom fonts for this template -->
-  <link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
-  <link rel="stylesheet" href="vendor/simple-line-icons/css/simple-line-icons.css">
   <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
 
-  <!-- Plugin CSS -->
-  <link rel="stylesheet" href="device-mockups/device-mockups.min.css">
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="{{url_for('static', filename='jquery.js') }}">\x3C/script>')</script>
 
-  <!-- Custom styles for this template -->
-  <link href="css/new-age.min.css" rel="stylesheet">
+  <script type=text/javascript>
+    $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+  </script>
 
   <style>
     div.top-buffer {
@@ -40,10 +39,10 @@
     <div class="row top-buffer">
       <div class="col-xs-4"/></div>
       <div class="col-xs-4">
-        <form>
+        <form action="/get-all-transactions">
           <div class="form-group">
-            <label for="inputAddress">Ethereum Address</label>
-            <input type="text" id="inputAddress" class="form-control" placeholder="0x12345..." required autofocus>
+            <label for="address">Ethereum Address</label>
+            <input type="text" id="address" class="form-control" placeholder="0x12345..." value="0x559db2865e1f099d63037c3ae4a6c8cc1106c819" required autofocus>
           </div>
           <div class="form-group">
             <button class="btn btn-lg btn-primary btn-block" type="submit">Get Results</button>
@@ -56,6 +55,7 @@
     <div class="row top-buffer">
       <div class="col-xs-2"></div>
       <div class="col-xs-8">
+        {% if transactions %}
         <table class="table table-striped">
           <thead>
             <tr>
@@ -63,8 +63,20 @@
               <th scope="col">Timestamp</th>
               <th scope="col">Value ETH</th>
               <th scope="col">Value USD</th>
-           </tr>
-        <thead>
+            </tr>
+          <thead>
+          <tbody>
+            {% for transaction in transactions %}
+              <tr>
+                <th scope="row">{{ transaction.block_number }}</th>
+                <td>{{ transaction.timestamp }} </td>
+                <td>{{ transaction.value_eth }}</td>
+                <td>{{ transaction.value_usd }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
       </div>
       <div class="col-xs-2"></div>
     </div>
