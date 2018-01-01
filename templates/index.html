@@ -1,0 +1,73 @@
+<!doctype html>
+<head>
+  <title>Ethereum Value Calculator</title>
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" 
+        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" 
+        crossorigin="anonymous">
+
+  <!-- Custom fonts for this template -->
+  <link rel="stylesheet" href="vendor/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="vendor/simple-line-icons/css/simple-line-icons.css">
+  <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Catamaran:100,200,300,400,500,600,700,800,900" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Muli" rel="stylesheet">
+
+  <!-- Plugin CSS -->
+  <link rel="stylesheet" href="device-mockups/device-mockups.min.css">
+
+  <!-- Custom styles for this template -->
+  <link href="css/new-age.min.css" rel="stylesheet">
+
+  <style>
+    div.top-buffer {
+      margin-top:40px;
+    }
+  </style>
+
+</head>
+
+<body id="page-top">
+  <div class="container">
+    <div class="row" id="header">
+      <div class="col-xs-12 text-center">
+        <h2 class="section-heading">Ethereum Value Calculator</h2>
+        <p>Compute mined Ethereum value (at time of mining) from Nanopool and Ethermine</p>
+      </div>
+    </div>
+
+    <div class="row top-buffer">
+      <div class="col-xs-4"/></div>
+      <div class="col-xs-4">
+        <form>
+          <div class="form-group">
+            <label for="inputAddress">Ethereum Address</label>
+            <input type="text" id="inputAddress" class="form-control" placeholder="0x12345..." required autofocus>
+          </div>
+          <div class="form-group">
+            <button class="btn btn-lg btn-primary btn-block" type="submit">Get Results</button>
+          </div>
+        </form>
+      </div>
+      <div class="col-xs-4"></div>
+    </div>
+
+    <div class="row top-buffer">
+      <div class="col-xs-2"></div>
+      <div class="col-xs-8">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th scope="col">Block Number</th>
+              <th scope="col">Timestamp</th>
+              <th scope="col">Value ETH</th>
+              <th scope="col">Value USD</th>
+           </tr>
+        <thead>
+      </div>
+      <div class="col-xs-2"></div>
+    </div>
+
+  </div>
+</body>
