@@ -71,7 +71,8 @@ def get_single_transaction(transaction):
   return { 'block_number': transaction['blockNumber'],
            'timestamp': transaction['timeStamp'],
            'value_eth': value_eth,
-           'value_usd': value_usd }
+           'value_usd': value_usd,
+           'from': transaction['from'] }
 
 def get_all_transactions(address):
   print("Fetching transactions for address: %s" % (address))
