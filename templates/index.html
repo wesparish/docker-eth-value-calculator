@@ -60,7 +60,13 @@ $(function() {
             success: function (response) {
                 console.log("response: " + JSON.stringify(response))
 
+
                 $(function() {
+                    if(response['error']) {
+                      $("#notification").html('<div class="alert alert-danger"><strong>Error!</strong> ' + response['error'] + '</div>');
+                    $("#result-table").html('');
+                    } else {
+
                     $("#notification").html('');
                     var $tableStr = '<table id="result-table" class="table table-striped"><tr><th scope="col">Block Number</th><th scope="col">From Address</th><th scope="col">To Address</th><th scope="col">Timestamp</th><th scope="col">Date</th><th scope="col">Value ETH</th><th scope="col">Value USD</th></tr></table>';
                     $("#result").html($tableStr);
@@ -75,10 +81,11 @@ $(function() {
                             $('<td>').text(item.value_usd)
                         ).appendTo('#result-table');
                     });
+                    }
                 });
             },
             error: function (response) {
-                $("#result").text('An error occurred, please try refreshing the page.')
+                $("#notification").html('<div class="alert alert-danger"><strong>Error!</strong> An error occurred, please try refreshing the page.</div>')
             },
         });
 
@@ -97,14 +104,14 @@ $(function() {
     <div class="row top-buffer">
       <div class="col-xs-4"/></div>
       <div class="col-xs-4">
-        <form id="eth-form" method="get" action="/get-all-transactions">
+        <form id="eth-form" method="post" action="/get-all-transactions">
           <div class="form-group">
             <label for="address">Ethereum Address</label>
-            <input type="text" id="address" class="form-control" placeholder="0x12345..." required autofocus>
+            <input type="text" name="address" id="address" class="form-control" placeholder="0x12345..." required autofocus>
           </div>
           <div class="form-group">
             <label for="fromList">(Optional) From Address Filter List</label>
-            <textarea id="fromList" class="form-control span6" rows="3" placeholder="0x12345...">
+            <textarea name="fromList" id="fromList" class="form-control span6" rows="3" placeholder="0x12345...">
 0x52bc44d5378309ee2abf1539bf71de1b7d7be3b5
 0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8
             </textarea>
@@ -112,9 +119,11 @@ $(function() {
           <div class="form-group">
             <label for="currencyType">(Optional) Currency Type</label>
             <p>
-              <select id="currencyType" name="currencyType">
+              <select id="currencyType" name="currencyType" class="form-control">
                 <option value="Eth">Eth</option>
                 <option value="Ubiq">Ubiq</option>
+                <option value="Monero">Monero</option>
+                <option value="Bitcoin">Bitcoin</option>
               </select>
             </p>
           </div>

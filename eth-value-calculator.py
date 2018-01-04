@@ -14,10 +14,18 @@ app = Flask(__name__)
 def hello():
   return render_template('index.html')
 
-@app.route("/get-all-transactions/<address>")
+@app.route("/get-all-transactions/<address>", methods=['get', 'post'])
 def get_transactions_table(address):
   print("/get-all-transactions endpoint called with address: %s" % (address))
-  transactions = get_all_transactions(address)
+  from_list = [s.strip() for s in request.form['fromList'].splitlines()]
+  from_list = [s for s in from_list if s != '']
+  print("from_list: %s" % (from_list))
+  currency_type = request.form['currencyType']
+
+  if not currency_type.lower() == "eth":
+    return jsonify({'error': 'Unsupported currency type: %s, please check back later!' % (currency_type)})
+
+  transactions = get_all_transactions(address, from_list)
   print("transactions returned: %s" % (transactions))
   return jsonify(transactions)
 
@@ -74,11 +82,10 @@ def get_single_transaction(transaction):
            'value_usd': value_usd,
            'from': transaction['from'] }
 
-def get_all_transactions(address):
+def get_all_transactions(address, from_list):
   print("Fetching transactions for address: %s" % (address))
   transaction_list = get_etherscan_transactions(address)
 
-  from_list = ['0x52bc44d5378309ee2abf1539bf71de1b7d7be3b5', '0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8']
   transaction_list = [transaction for transaction in transaction_list if transaction['from'] in from_list]
   
   return_list = []
