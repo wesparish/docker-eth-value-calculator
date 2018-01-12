@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 
 RUN apt-get update && \
     apt-get install python3-pip git python3 vim-tiny curl -y && \
-    pip3 install flask requests && \
+    pip3 install python-dateutil flask requests XlsxWriter && \
     apt-get autoremove -y && \
     apt-get clean
 

@@ -34,7 +34,6 @@
 </head>
 
 <body id="page-top">
-
   <script>
 $(function() {
     $('#submit-button').on('click', function (e) {
@@ -46,6 +45,7 @@ $(function() {
           $("#notification").html('');
         }
 
+        $("#xslxLink").addClass('hidden');
         var $form = $('#eth-form');
         var $url = $form.attr("action") + "/" + $("#address").val();
 
@@ -60,17 +60,19 @@ $(function() {
             success: function (response) {
                 console.log("response: " + JSON.stringify(response))
 
-
                 $(function() {
                     if(response['error']) {
                       $("#notification").html('<div class="alert alert-danger"><strong>Error!</strong> ' + response['error'] + '</div>');
                     $("#result-table").html('');
                     } else {
 
+                    document.getElementById("xslxLink").setAttribute("href", 'static/' + response['xslx_filename']);
+                    $("#xslxLink").removeClass('hidden');
+
                     $("#notification").html('');
                     var $tableStr = '<table id="result-table" class="table table-striped"><tr><th scope="col">Block Number</th><th scope="col">From Address</th><th scope="col">To Address</th><th scope="col">Timestamp</th><th scope="col">Date</th><th scope="col">Value ETH</th><th scope="col">Value USD</th></tr></table>';
                     $("#result").html($tableStr);
-                    $.each(response, function(i, item) {
+                    $.each(response['transactions'], function(i, item) {
                         var $tr = $('<tr>').append(
                             $('<td>').text(item.block_number),
                             $('<td>').text(item.from),
@@ -127,6 +129,24 @@ $(function() {
               </select>
             </p>
           </div>
+
+          <div class="form-group">
+            <label for="startDate">(Optional) Start Date</label>
+            <p>
+            <input type="date" name="startDate" class="form-control" id="startDate" value="2010-05-22">
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label for="endDate">(Optional) End Date</label>
+            <p>
+            <input type="date" name="endDate" class="form-control" id="endDate">
+            <script>
+              document.getElementById('endDate').valueAsDate = new Date();
+            </script>
+            </p>
+          </div>
+
           <div class="form-group">
             <button class="btn btn-lg btn-primary btn-block" type="submit" id="submit-button">Get Results</button>
           </div>
@@ -148,7 +168,12 @@ $(function() {
 
     <div class="row top-buffer">
       <div class="col-xs-12">
-        <div id="result"></div>
+        <p>
+          <a id='xslxLink' class="btn btn-info hidden" role="button">Download Excel Spreadsheet</a>
+        </p>
+        <p>
+          <div id="result"></div>
+        </p>
       </div>
     </div>
 

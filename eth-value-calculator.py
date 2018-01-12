@@ -7,6 +7,9 @@ import sys
 from optparse import OptionParser
 from flask import Flask, render_template, request, jsonify
 from multiprocessing import Pool
+import xlsxwriter
+import datetime
+from dateutil import parser as dateparser
 
 app = Flask(__name__)
 
@@ -25,9 +28,15 @@ def get_transactions_table(address):
   if not currency_type.lower() == "eth":
     return jsonify({'error': 'Unsupported currency type: %s, please check back later!' % (currency_type)})
 
-  transactions = get_all_transactions(address, from_list)
+  start_date = dateparser.parse(request.form['startDate']).timestamp()
+  end_date = dateparser.parse(request.form['endDate']).timestamp()
+
+  transactions = get_all_transactions(address, from_list, start_date, end_date)
+  # Create xlsx file
+  write_xslx(address, transactions)
   print("transactions returned: %s" % (transactions))
-  return jsonify(transactions)
+  return jsonify({'transactions': transactions,
+                  'xslx_filename' : 'xlsx_files/%s.xlsx' % address})
 
 parser = OptionParser()
 parser.add_option("-a", "--address", dest="address",
@@ -37,6 +46,39 @@ parser.add_option("-d", "--debug", dest="debug", default=False,
 parser.add_option("-s", "--server", dest="server", default=False,
                   help="Run web server", action="store_true")
 (options, args) = parser.parse_args()
+
+def write_xslx(address, transaction_list):
+  workbook = xlsxwriter.Workbook('static/xlsx_files/%s.xlsx' % address)
+  worksheet1 = workbook.add_worksheet()
+  bold = workbook.add_format({'bold': 1})
+  date_format = workbook.add_format({'num_format': 'mm/dd/yy hh:mm:ss'})
+
+  # Set col widths
+  worksheet1.set_column('A:A', 16)
+  worksheet1.set_column('B:C', 45)
+  worksheet1.set_column('D:G', 16)
+
+  # Create table
+  worksheet1.add_table(0, 0, len(transaction_list), 6,
+                         {'columns': [{'header': 'Block Number'},
+                                      {'header': 'From'},
+                                      {'header': 'Address'},
+                                      {'header': 'Timestamp'},
+                                      {'header': 'Date'},
+                                      {'header': 'Value Eth'},
+                                      {'header': 'Value Usd'}]})
+
+  data_row_start = 1
+  for row_num, transaction in enumerate(transaction_list):
+    worksheet1.write(data_row_start + row_num, 0, int(transaction['block_number']))
+    worksheet1.write(data_row_start + row_num, 1, transaction['from'])
+    worksheet1.write(data_row_start + row_num, 2, transaction['address'])
+    worksheet1.write(data_row_start + row_num, 3, int(transaction['timestamp']))
+    timestamp = datetime.datetime.fromtimestamp(float(transaction['timestamp']))
+    worksheet1.write_datetime(data_row_start + row_num, 4, timestamp, date_format)
+    worksheet1.write(data_row_start + row_num, 5, transaction['value_eth'])
+    worksheet1.write(data_row_start + row_num, 6, transaction['value_usd'])
+  workbook.close()
 
 def get_eth_price(timestamp):
   url = "https://min-api.cryptocompare.com/data/pricehistorical?fsym=ETH&tsyms=USD&ts=%s" % (timestamp)
@@ -67,6 +109,8 @@ def dump_csv_stdout(address):
                                 transaction['value_eth'],
                                 transaction['value_usd'] ])
 
+  write_xslx(address, all_transactions)
+
 def get_single_transaction(transaction):
   print("Fetching transaction from server for block %s..." % transaction['blockNumber'])
   value_eth = float(transaction['value']) / 1000000000000000000.0
@@ -82,12 +126,21 @@ def get_single_transaction(transaction):
            'value_usd': value_usd,
            'from': transaction['from'] }
 
-def get_all_transactions(address, from_list):
+def get_all_transactions(address, from_list=None, start_date=None, end_date=None):
   print("Fetching transactions for address: %s" % (address))
   transaction_list = get_etherscan_transactions(address)
 
-  transaction_list = [transaction for transaction in transaction_list if transaction['from'] in from_list]
+  if from_list:
+    # Lowercase from_list
+    from_list = [address.lower() for address in from_list]
+    transaction_list = [transaction for transaction in transaction_list if transaction['from'].lower() in from_list]
+
+  if start_date:
+    transaction_list = [transaction for transaction in transaction_list if float(transaction['timeStamp']) > start_date]
   
+  if end_date:
+    transaction_list = [transaction for transaction in transaction_list if float(transaction['timeStamp']) < end_date]
+
   return_list = []
   with Pool(processes=10) as pool:
     return_list = pool.map(get_single_transaction, transaction_list)
