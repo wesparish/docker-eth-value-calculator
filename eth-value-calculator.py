@@ -10,148 +10,75 @@ from multiprocessing import Pool
 import xlsxwriter
 import datetime
 from dateutil import parser as dateparser
+from lib.eth import Eth
+from lib.ubiq import Ubiq
+import logging
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 app = Flask(__name__)
 
 @app.route("/")
-def hello():
+def index():
   return render_template('index.html')
 
 @app.route("/get-all-transactions/<address>", methods=['get', 'post'])
 def get_transactions_table(address):
-  print("/get-all-transactions endpoint called with address: %s" % (address))
+  logging.info("/get-all-transactions endpoint called with address: %s" % (address))
   from_list = [s.strip() for s in request.form['fromList'].splitlines()]
   from_list = [s for s in from_list if s != '']
-  print("from_list: %s" % (from_list))
+  logging.debug("from_list: %s" % (from_list))
   currency_type = request.form['currencyType']
 
-  if not currency_type.lower() == "eth":
+  currency_processor = { 
+    "eth": Eth(address),
+    "ubiq": Ubiq(address)
+  }.get(currency_type.lower(), None) 
+
+  if not currency_processor:
     return jsonify({'error': 'Unsupported currency type: %s, please check back later!' % (currency_type)})
 
   start_date = dateparser.parse(request.form['startDate']).timestamp()
   end_date = dateparser.parse(request.form['endDate']).timestamp()
 
-  transactions = get_all_transactions(address, from_list, start_date, end_date)
+  transactions = currency_processor.get_all_transactions(from_list, start_date, end_date)
   # Create xlsx file
-  write_xslx(address, transactions)
-  print("transactions returned: %s" % (transactions))
+  filename = currency_processor.write_xslx(transactions)
+  logging.info("transactions returned: %s" % (transactions))
   return jsonify({'transactions': transactions,
-                  'xslx_filename' : 'xlsx_files/%s.xlsx' % address})
+                  'xslx_filename' : 'xlsx_files/%s' % filename})
 
 parser = OptionParser()
 parser.add_option("-a", "--address", dest="address",
-                  help="ETH address")
+                  help="(Required) ETH address")
+parser.add_option("-f", "--start-date", dest="start_date",
+                  help="Start Date (e.g. 2020-02-01)")
+parser.add_option("-t", "--end-date", dest="end_date",
+                  help="End Date (e.g. 2020-02-01)")
+parser.add_option("-l", "--from-list", dest="from_list",
+                  help="From List")
 parser.add_option("-d", "--debug", dest="debug", default=False,
                   help="Debug mode", action="store_true")
 parser.add_option("-s", "--server", dest="server", default=False,
                   help="Run web server", action="store_true")
 (options, args) = parser.parse_args()
 
-def write_xslx(address, transaction_list):
-  workbook = xlsxwriter.Workbook('static/xlsx_files/%s.xlsx' % address)
-  worksheet1 = workbook.add_worksheet()
-  bold = workbook.add_format({'bold': 1})
-  date_format = workbook.add_format({'num_format': 'mm/dd/yy hh:mm:ss'})
+if not options.address:
+  parser.print_help()
+  exit(1)
 
-  # Set col widths
-  worksheet1.set_column('A:A', 16)
-  worksheet1.set_column('B:C', 45)
-  worksheet1.set_column('D:G', 16)
+start_date = options.start_date if options.start_date else None
+end_date = options.end_date if options.end_date else None
+from_list = options.from_list if options.from_list else None
 
-  # Create table
-  worksheet1.add_table(0, 0, len(transaction_list), 6,
-                         {'columns': [{'header': 'Block Number'},
-                                      {'header': 'From'},
-                                      {'header': 'Address'},
-                                      {'header': 'Timestamp'},
-                                      {'header': 'Date'},
-                                      {'header': 'Value Eth'},
-                                      {'header': 'Value Usd'}]})
+# convert start/end dates to unix timestamps
+from dateutil import parser
+start_date = parser.parse(start_date).timestamp() if start_date else None
+end_date = parser.parse(end_date).timestamp() if end_date else None
 
-  data_row_start = 1
-  for row_num, transaction in enumerate(transaction_list):
-    worksheet1.write(data_row_start + row_num, 0, int(transaction['block_number']))
-    worksheet1.write(data_row_start + row_num, 1, transaction['from'])
-    worksheet1.write(data_row_start + row_num, 2, transaction['address'])
-    worksheet1.write(data_row_start + row_num, 3, int(transaction['timestamp']))
-    timestamp = datetime.datetime.fromtimestamp(float(transaction['timestamp']))
-    worksheet1.write_datetime(data_row_start + row_num, 4, timestamp, date_format)
-    worksheet1.write(data_row_start + row_num, 5, transaction['value_eth'])
-    worksheet1.write(data_row_start + row_num, 6, transaction['value_usd'])
-  workbook.close()
-
-def get_eth_price(timestamp):
-  url = "https://min-api.cryptocompare.com/data/pricehistorical?fsym=ETH&tsyms=USD&ts=%s" % (timestamp)
-  r = requests.get(url)
-  r.raise_for_status()
-  return r.json()['ETH']['USD']
-
-def get_etherscan_transactions(address):
-  url = "http://api.etherscan.io/api?module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=asc" % (address)
-  r = requests.get(url)
-  r.raise_for_status()
-  return r.json()['result']
-
-def dump_csv_stdout(address):
-  print("Please wait, fetching all transactions")
-  all_transactions = get_all_transactions(address)
-  print("all transactions = %s" % (all_transactions))
-
-  csv_writer = csv.writer(sys.stdout)
-  csv_writer.writerow([ "Block Number",
-                        "Timestamp",
-                        "Value ETH",
-                        "Value USD" ])
-
-  for transaction in all_transactions:
-          csv_writer.writerow([ transaction['block_number'],
-                                transaction['timestamp'],
-                                transaction['value_eth'],
-                                transaction['value_usd'] ])
-
-  write_xslx(address, all_transactions)
-
-def get_single_transaction(transaction):
-  print("Fetching transaction from server for block %s..." % transaction['blockNumber'])
-  value_eth = float(transaction['value']) / 1000000000000000000.0
-  value_usd = None
-  while not value_usd:
-    try:
-      value_usd = value_eth * get_eth_price(transaction['timeStamp'])
-    except Exception:
-      print("Caught exception")
-  return { 'block_number': transaction['blockNumber'],
-           'timestamp': transaction['timeStamp'],
-           'value_eth': value_eth,
-           'value_usd': value_usd,
-           'from': transaction['from'] }
-
-def get_all_transactions(address, from_list=None, start_date=None, end_date=None):
-  print("Fetching transactions for address: %s" % (address))
-  transaction_list = get_etherscan_transactions(address)
-
-  if from_list:
-    # Lowercase from_list
-    from_list = [address.lower() for address in from_list]
-    transaction_list = [transaction for transaction in transaction_list if transaction['from'].lower() in from_list]
-
-  if start_date:
-    transaction_list = [transaction for transaction in transaction_list if float(transaction['timeStamp']) > start_date]
-  
-  if end_date:
-    transaction_list = [transaction for transaction in transaction_list if float(transaction['timeStamp']) < end_date]
-
-  return_list = []
-  with Pool(processes=10) as pool:
-    return_list = pool.map(get_single_transaction, transaction_list)
-
-  for item in return_list:
-    item.update( {"address":address} )
-
-  return return_list
+print("start_date: %s, end_date: %s" % (start_date, end_date))
 
 if options.server:
   app.run(debug=options.debug, host='0.0.0.0')
 else:
-  dump_csv_stdout(options.address)
+  Eth(options.address).dump_csv_stdout(start_date=start_date, end_date=end_date, from_list=from_list)
 

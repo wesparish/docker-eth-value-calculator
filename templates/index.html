@@ -70,7 +70,7 @@ $(function() {
                     $("#xslxLink").removeClass('hidden');
 
                     $("#notification").html('');
-                    var $tableStr = '<table id="result-table" class="table table-striped"><tr><th scope="col">Block Number</th><th scope="col">From Address</th><th scope="col">To Address</th><th scope="col">Timestamp</th><th scope="col">Date</th><th scope="col">Value ETH</th><th scope="col">Value USD</th></tr></table>';
+                    var $tableStr = '<table id="result-table" class="table table-striped"><tr><th scope="col">Block Number</th><th scope="col">From Address</th><th scope="col">To Address</th><th scope="col">Timestamp</th><th scope="col">Date</th><th scope="col">Value Coin</th><th scope="col">Value USD</th></tr></table>';
                     $("#result").html($tableStr);
                     $.each(response['transactions'], function(i, item) {
                         var $tr = $('<tr>').append(
@@ -79,7 +79,7 @@ $(function() {
                             $('<td>').text(item.address),
                             $('<td>').text(item.timestamp),
                             $('<td>').text(new Date(item.timestamp*1000)),
-                            $('<td>').text(item.value_eth),
+                            $('<td>').text(item.value_crypto),
                             $('<td>').text(item.value_usd)
                         ).appendTo('#result-table');
                     });
