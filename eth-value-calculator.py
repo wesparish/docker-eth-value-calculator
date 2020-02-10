@@ -12,6 +12,7 @@ import datetime
 from dateutil import parser as dateparser
 from lib.eth import Eth
 from lib.ubiq import Ubiq
+from lib.btc import Btc
 import logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -31,7 +32,8 @@ def get_transactions_table(address):
 
   currency_processor = { 
     "eth": Eth(address),
-    "ubiq": Ubiq(address)
+    "ubiq": Ubiq(address),
+    "btc": Btc(address)
   }.get(currency_type.lower(), None) 
 
   if not currency_processor:
@@ -50,6 +52,8 @@ def get_transactions_table(address):
 parser = OptionParser()
 parser.add_option("-a", "--address", dest="address",
                   help="(Required) ETH address")
+parser.add_option("-c", "--currency", dest="currency_type",
+                  help="(Default: eth) Currency type (etc, ubiq, btc)")
 parser.add_option("-f", "--start-date", dest="start_date",
                   help="Start Date (e.g. 2020-02-01)")
 parser.add_option("-t", "--end-date", dest="end_date",
@@ -66,6 +70,16 @@ if not options.address:
   parser.print_help()
   exit(1)
 
+address = options.address
+
+currency_type = 'eth' if options.currency_type == None else options.currency_type
+
+currency_processor = {
+  "eth": Eth(address),
+  "ubiq": Ubiq(address),
+  "btc": Btc(address)
+}.get(currency_type)
+
 start_date = options.start_date if options.start_date else None
 end_date = options.end_date if options.end_date else None
 from_list = options.from_list if options.from_list else None
@@ -80,5 +94,4 @@ print("start_date: %s, end_date: %s" % (start_date, end_date))
 if options.server:
   app.run(debug=options.debug, host='0.0.0.0')
 else:
-  Eth(options.address).dump_csv_stdout(start_date=start_date, end_date=end_date, from_list=from_list)
-
+  currency_processor.dump_csv_stdout(start_date=start_date, end_date=end_date, from_list=from_list)

@@ -5,9 +5,9 @@ import sys
 import logging
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-class Eth(CryptoBase):
+class Btc(CryptoBase):
   def __init__(self, address):
-    super(Eth, self).__init__(address)
+    super(Btc, self).__init__(address)
 
   def get_single_transaction(self, transaction):
     logging.info("Fetching transaction from server for block %s..." % transaction['blockNumber'])
@@ -49,14 +49,36 @@ class Eth(CryptoBase):
     return return_list
 
   def get_price_from_api(self, timestamp):
-    url = "https://min-api.cryptocompare.com/data/pricehistorical?fsym=ETH&tsyms=USD&ts=%s" % (timestamp)
+    url = "https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms=USD&ts=%s" % (timestamp)
     r = requests.get(url)
     r.raise_for_status()
-    return r.json()['ETH']['USD']
+    return r.json()['BTC']['USD']
 
+  '''
+  curl -d '{"addr":"bc1qdr0g7sxlw72fgu64j97f7lgzphn6288xffw6k2"}' https://www.blockonomics.co/api/searchhistory
+  {
+    "pending": [],
+    "history": [
+      {
+        "time": 1581041825,
+        "addr": [
+          "bc1qdr0g7sxlw72fgu64j97f7lgzphn6288xffw6k2"
+        ],
+        "value": 1378429,
+        "txid": "159175e3bab364451ff68f82e4c369df5914477118410bdbd6529d7ab1cdef91"
+      },
+  '''
   def get_transactions_from_api(self):
-    url = "http://api.etherscan.io/api?module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=asc" % (self.address)
-    r = requests.get(url)
+    url = "https://www.blockonomics.co/api/searchhistory"
+    r = requests.post(url, data='{"addr": "%s"}' % self.address)
     r.raise_for_status()
-    return r.json()['result']
+    results = [ {'from': None,
+                 'address': x['addr'][0],
+                 'timeStamp': x['time'],
+                 'value': x['value'] / 1000000000.00,
+                 'blockNumber': 0,
+                 } for x in r.json()['history'] ]
+    logging.info("get_transactions_from_api() results: %s" % results)
+
+    return results
 
